@@ -132,7 +132,24 @@ function saveProduct(id){
  save();productsPanel();render();
 }
 function salesPanel(){
- sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>📊 Histórico</h2>${state.sales.length?state.sales.slice().reverse().map((s,idx)=>`<div class="row"><div><b>${new Date(s.date).toLocaleString('pt-BR')}</b><br>${s.items.reduce((a,i)=>a+i.qty,0)} itens • ${s.payment}<br><small>${s.items.map(i=>i.qty+'x '+i.name).join(', ')}</small></div><div style="text-align:right"><b>${money(s.total)}</b><br><button class="qty remove" onclick="reverseSale(${state.sales.length-1-idx})">↩️ Estornar</button></div></div>`).join(''):'<p>Nenhuma venda registrada.</p>'}`;
+ sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>📊 Histórico</h2><button class="save" style="width:100%;margin-bottom:10px" onclick="sendDailyReport()">📲 Enviar relatório do dia pelo WhatsApp</button>${state.sales.length?state.sales.slice().reverse().map((s,idx)=>`<div class="row"><div><b>${new Date(s.date).toLocaleString('pt-BR')}</b><br>${s.items.reduce((a,i)=>a+i.qty,0)} itens • ${s.payment}<br><small>${s.items.map(i=>i.qty+'x '+i.name).join(', ')}</small></div><div style="text-align:right"><b>${money(s.total)}</b><br><button class="qty remove" onclick="reverseSale(${state.sales.length-1-idx})">↩️ Estornar</button></div></div>`).join(''):'<p>Nenhuma venda registrada.</p>'}`;
+}
+function sendDailyReport(){
+ const now=new Date();
+ const y=now.getFullYear(), m=now.getMonth(), d=now.getDate();
+ const daily=state.sales.filter(s=>{
+   const dt=new Date(s.date);
+   return dt.getFullYear()===y && dt.getMonth()===m && dt.getDate()===d;
+ });
+ const totals={};
+ daily.forEach(s=>s.items.forEach(i=>totals[i.name]=(totals[i.name]||0)+i.qty));
+ const names=Object.keys(totals);
+ if(!names.length)return alert('Nenhuma venda registrada hoje.');
+ const date=now.toLocaleDateString('pt-BR');
+ const lines=names.sort((a,b)=>a.localeCompare(b,'pt-BR')).map(name=>`- ${name} — ${totals[name]} un.`);
+ const totalUnits=Object.values(totals).reduce((a,n)=>a+n,0);
+ const msg=`📦 RELATÓRIO DE VENDAS — FELIX RAÇÕES\n📅 ${date}\n\n${lines.join('\n')}\n\nTotal de produtos vendidos: ${totalUnits} un.`;
+ window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 function reverseSale(index){
  let s=state.sales[index];
