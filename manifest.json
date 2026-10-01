@@ -1,7 +1,7 @@
 {
-  "name": "Felix Rações - Sistema de Vendas",
-  "short_name": "Felix Rações",
-  "description": "Sistema de vendas e estoque da Felix Rações",
+  "name": "Breda Rações - Sistema de Vendas",
+  "short_name": "Breda Rações",
+  "description": "Sistema de vendas e estoque da Breda Rações",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
