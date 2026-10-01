@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4c400">
+<link rel="manifest" href="manifest.json">
+<title>Breda Rações - Vendas</title>
+<meta name="application-name" content="Breda Rações">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--yellow:#f4c400;--yellow2:#ffd83d;--dark:#242424;--bg:#f6f1dc;--card:#fffdf4;--muted:#777;--green:#218739;--red:#d83b32}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--dark)}
+header{position:sticky;top:0;z-index:10;background:var(--yellow);padding:14px 14px 10px;box-shadow:0 2px 8px #0002}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{font-size:21px;font-weight:800}.subtitle{font-size:12px;margin-top:2px;opacity:.75}
+.iconbtn{border:0;background:#fff8;border-radius:12px;padding:10px;font-size:18px}
+.search{margin-top:11px;width:100%;padding:12px 14px;border:0;border-radius:14px;font-size:15px;outline:none}
+.tabs{display:flex;gap:8px;overflow:auto;padding:12px 14px 4px}.tab{border:0;background:#fff8d7;padding:9px 14px;border-radius:999px;white-space:nowrap;font-weight:700}.tab.active{background:var(--dark);color:white}
+main{padding:10px 12px 145px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 2px 10px #00000012;position:relative}
+.photo{height:135px;background:#eee8cc;display:flex;align-items:center;justify-content:center;font-size:58px}.info{padding:10px}.name{font-weight:800;font-size:15px;line-height:1.15;min-height:35px}.desc{font-size:11px;color:var(--muted);margin:5px 0}.price{font-size:19px;font-weight:900;margin-top:7px}.stock{font-size:11px;color:var(--green);margin-top:3px}.add{position:absolute;right:9px;bottom:9px;width:39px;height:39px;border:0;border-radius:12px;background:var(--yellow);font-size:24px;font-weight:700}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#fffef7;border-top:1px solid #ddd;padding:10px 12px calc(10px + env(safe-area-inset-bottom));z-index:20;box-shadow:0 -3px 15px #0002}.cartline{display:flex;justify-content:space-between;align-items:center}.cartcount{font-weight:800}.total{font-size:22px;font-weight:900}.finish{width:100%;margin-top:8px;border:0;border-radius:14px;padding:13px;background:var(--green);color:#fff;font-size:16px;font-weight:900}
+.panel{display:none;position:fixed;inset:0;background:#0008;z-index:30}.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88vh;background:#fffef7;border-radius:22px 22px 0 0;padding:18px;overflow:auto}.sheet h2{margin:0 0 14px}.row{display:flex;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #ddd}.qty button{border:0;background:#eee;border-radius:8px;padding:4px 9px;font-size:16px}.close{float:right;border:0;background:#eee;border-radius:10px;padding:7px 11px}
+.form{display:grid;gap:9px}.form input,.form select{padding:12px;border:1px solid #ccc;border-radius:10px;font-size:15px}.save{border:0;background:var(--yellow);padding:12px;border-radius:10px;font-weight:800}.danger{background:#fee;color:#b00}
+.empty{text-align:center;padding:45px 10px;color:#777;grid-column:1/-1}
+@media(min-width:800px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.photo{height:160px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><div><div class="brand">🐶 Breda Rações</div><div class="subtitle">Sistema de vendas</div></div><button class="iconbtn" onclick="openPanel('menu')">☰</button></div>
+  <input id="search" class="search" placeholder="🔎 Procurar produto..." oninput="render()">
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button onclick="productsPanel()" style="flex:1;border:0;border-radius:12px;padding:11px;background:#242424;color:#fff;font-weight:800;font-size:14px">📦 Produtos / Estoque</button>
+    <button onclick="salesPanel()" style="flex:1;border:0;border-radius:12px;padding:11px;background:#fff8d7;color:#242424;font-weight:800;font-size:14px">📊 Vendas</button>
+  </div>
+  <div id="tabs" class="tabs"></div>
+</header>
+<main><div id="grid" class="grid"></div></main>
+
+<div class="bottom">
+  <div class="cartline"><div class="cartcount" id="cartCount">0 itens</div><div class="total" id="cartTotal">R$ 0,00</div></div>
+  <button class="finish" onclick="openCart()">🛒 Ver carrinho / Finalizar venda</button>
+</div>
+
+<div id="panel" class="panel" onclick="if(event.target===this)closePanel()">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+const KEY='breda_racoes_v1';
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ category:'Todos',
+ cart:[],
+ sales:[],
+ products:[
+  {id:1,name:'Ração Magnus Adulto 15kg',price:129.90,stock:10,cat:'Cães',emoji:'🐶',desc:'Ração para cães adultos'},
+  {id:2,name:'Ração Premier 15kg',price:189.90,stock:6,cat:'Cães',emoji:'🐕',desc:'Alimento completo'},
+  {id:3,name:'Ração Golden Gatos 10kg',price:119.90,stock:8,cat:'Gatos',emoji:'🐱',desc:'Para gatos adultos'},
+  {id:4,name:'Ração Granvita 10kg',price:89.90,stock:12,cat:'Cães',emoji:'🐕‍🦺',desc:'Nutrição diária'},
+  {id:5,name:'Petisco para cães 500g',price:14.90,stock:20,cat:'Petiscos',emoji:'🦴',desc:'Petisco sabor carne'},
+  {id:6,name:'Areia para gatos 4kg',price:18.90,stock:15,cat:'Gatos',emoji:'🐈',desc:'Alta absorção'},
+  {id:7,name:'Shampoo Pet 500ml',price:22.90,stock:9,cat:'Higiene',emoji:'🧴',desc:'Higiene para cães e gatos'},
+  {id:8,name:'Brinquedo para cachorro',price:19.90,stock:7,cat:'Acessórios',emoji:'🎾',desc:'Diversão para seu pet'}
+ ]};
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function money(n){return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function cats(){return ['Todos',...new Set(state.products.map(p=>p.cat))]}
+function renderTabs(){tabs.innerHTML=cats().map(c=>`<button class="tab ${state.category===c?'active':''}" onclick="state.category='${c}';render()">${c}</button>`).join('')}
+function render(){
+ renderTabs();
+ const q=search.value.toLowerCase();
+ const arr=state.products.filter(p=>(state.category==='Todos'||p.cat===state.category)&&p.name.toLowerCase().includes(q));
+ grid.innerHTML=arr.length?arr.map(p=>`<div class="card"><div class="photo">${p.emoji}</div><div class="info"><div class="name">${p.name}</div><div class="desc">${p.desc}</div><div class="price">${money(p.price)}</div><div class="stock">${p.stock>0?'Estoque: '+p.stock:'Sem estoque'}</div></div><button class="add" onclick="add(${p.id})" ${p.stock<=0?'disabled':''}>+</button></div>`).join(''):'<div class="empty">Nenhum produto encontrado.</div>';
+ let count=state.cart.reduce((a,i)=>a+i.qty,0), total=state.cart.reduce((a,i)=>a+i.qty*i.price,0);
+ cartCount.textContent=count+' '+(count===1?'item':'itens'); cartTotal.textContent=money(total);
+ save();
+}
+function add(id){let p=state.products.find(x=>x.id===id);if(!p||p.stock<=0)return;let i=state.cart.find(x=>x.id===id);if(i)i.qty++;else state.cart.push({id:p.id,name:p.name,price:p.price,qty:1});render()}
+function openCart(){
+ let total=state.cart.reduce((a,i)=>a+i.qty*i.price,0);
+ sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>🛒 Venda atual</h2>${state.cart.length?state.cart.map(i=>`<div class="row"><div><b>${i.name}</b><br>${money(i.price)} cada</div><div class="qty"><button onclick="change(${i.id},-1)">−</button> ${i.qty} <button onclick="change(${i.id},1)">+</button></div></div>`).join(''):'<p>Seu carrinho está vazio.</p>'}<h2 style="text-align:right;margin-top:16px">${money(total)}</h2>${state.cart.length?`<select id="pay"><option>PIX</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option></select><button class="finish" onclick="finishSale()">✓ Finalizar venda</button>`:''}`;
+ openPanel();
+}
+function change(id,d){let i=state.cart.find(x=>x.id===id);if(!i)return;i.qty+=d;if(i.qty<=0)state.cart=state.cart.filter(x=>x.id!==id);openCart();render()}
+function finishSale(){
+ if(!state.cart.length)return;
+ let pay=document.getElementById('pay').value;
+ state.cart.forEach(i=>{let p=state.products.find(x=>x.id===i.id);p.stock=Math.max(0,p.stock-i.qty)});
+ state.sales.push({date:new Date().toISOString(),items:state.cart,payment:pay,total:state.cart.reduce((a,i)=>a+i.qty*i.price,0)});
+ state.cart=[];save();closePanel();render();alert('Venda registrada com sucesso!');
+}
+function openPanel(type){
+ panel.style.display='block';
+ if(type==='menu') sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>⚙️ Menu</h2><button class="finish" onclick="productsPanel()">📦 Produtos e estoque</button><button class="save" style="width:100%;margin-top:8px" onclick="newProduct()">➕ Cadastrar novo produto</button><button class="finish" style="margin-top:8px;background:#555" onclick="salesPanel()">📊 Histórico de vendas</button>`;
+}
+function productsPanel(){
+ sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>📦 Produtos / Estoque</h2><button class="save" style="width:100%" onclick="newProduct()">➕ Cadastrar produto</button><div style="margin-top:10px">${state.products.map(p=>`<div class="row"><div><b>${p.name}</b><br>${money(p.price)} • Estoque: ${p.stock}</div><button onclick="editProduct(${p.id})">✏️</button></div>`).join('')}</div>`;
+}
+function newProduct(){editProduct(null)}
+function editProduct(id){
+ let p=id?state.products.find(x=>x.id===id):{name:'',price:0,stock:0,cat:'Cães',emoji:'🐶',desc:''};
+ sheet.innerHTML=`<button class="close" onclick="productsPanel()">✕</button><h2>${id?'Editar':'Novo'} produto</h2><div class="form">
+<input id="pn" placeholder="Nome do produto" value="${p.name}">
+<input id="pp" type="number" step="0.01" placeholder="Preço de venda" value="${p.price}">
+<input id="ps" type="number" placeholder="Estoque" value="${p.stock}">
+<select id="pc">${cats().filter(x=>x!=='Todos').map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}<option>Outros</option></select>
+<input id="pe" placeholder="Emoji/ícone" value="${p.emoji}">
+<input id="pd" placeholder="Descrição" value="${p.desc}">
+<button class="save" onclick="saveProduct(${id||0})">Salvar produto</button></div>`;
+}
+function saveProduct(id){
+ let obj={id:id||Date.now(),name:pn.value,price:Number(pp.value),stock:Number(ps.value),cat:pc.value,emoji:pe.value||'🐶',desc:pd.value};
+ if(!obj.name)return alert('Digite o nome do produto.');
+ if(id){let idx=state.products.findIndex(x=>x.id===id);state.products[idx]=obj}else state.products.push(obj);
+ save();productsPanel();render();
+}
+function salesPanel(){
+ sheet.innerHTML=`<button class="close" onclick="closePanel()">✕</button><h2>📊 Histórico</h2>${state.sales.length?state.sales.slice().reverse().map(s=>`<div class="row"><div><b>${new Date(s.date).toLocaleString('pt-BR')}</b><br>${s.items.reduce((a,i)=>a+i.qty,0)} itens • ${s.payment}</div><b>${money(s.total)}</b></div>`).join(''):'<p>Nenhuma venda registrada.</p>'}`;
+}
+function closePanel(){panel.style.display='none'}
+render();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+}
+</script>
+
+</body>
+</html>
